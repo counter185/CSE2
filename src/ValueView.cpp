@@ -266,6 +266,8 @@ void PutValueView(int flx, int fly)
 
 		BOOL sw = FALSE;
 
+		int xPos = 8;
+
 		for (int i = 3; i >= 0; i--)
 		{
 			if (!sw && i != 0 && fig[i] == 0)
@@ -276,7 +278,7 @@ void PutValueView(int flx, int fly)
 			if (vw.minus)
 				fig[i] += 10;
 
-			int vwPosX = (i * 8) + 8;
+			int vwPosX = xPos;
 			int vwPosY = 0;
 
 			RECT targetRect = rect[fig[i]];
@@ -284,6 +286,7 @@ void PutValueView(int flx, int fly)
 
 			//Surface2Surface(, gVV[index].rect.top, &rect[fig[i]], SURFACE_ID_VALUE_VIEW, SURFACE_ID_TEXT_BOX);
 			PutBitmap3(&grcGame, screenX + vwPosX, screenY + vwPosY, &targetRect, SURFACE_ID_TEXT_BOX);
+			xPos += 8;
 		}
 	}
 }
