@@ -12,19 +12,46 @@
 #define STBI_ONLY_PNG
 #define STBI_NO_LINEAR
 #define STBI_NO_STDIO
+
 #include "../external/stb_image.h"
+
+#ifdef __PS2__
+#include <SDL2/SDL.h>
+#else
+#include "SDL.h"
+#endif
 
 #include "File.h"
 
 unsigned char* DecodeBitmap(const unsigned char *in_buffer, size_t in_buffer_size, size_t *width, size_t *height, unsigned int bytes_per_pixel)
 {
-	int int_width, int_height;
-	unsigned char *image_buffer = stbi_load_from_memory(in_buffer, in_buffer_size, &int_width, &int_height, NULL, bytes_per_pixel);
+	SDL_Surface* srf = SDL_LoadBMP_RW(SDL_RWFromConstMem(in_buffer, (int)in_buffer_size), 1);
+	
+	if (srf != NULL) {
+		
+		SDL_Surface* conv = SDL_ConvertSurfaceFormat(srf, SDL_PIXELFORMAT_RGB24, 0);
+		*width = conv->w;
+		*height = conv->h;
+		unsigned char* image_buffer = (unsigned char*)malloc(conv->w * conv->h * bytes_per_pixel);
+		if (image_buffer != NULL) {
+			memcpy(image_buffer, conv->pixels, conv->w * conv->h * bytes_per_pixel);
+		}
+		SDL_FreeSurface(srf);
+		SDL_FreeSurface(conv);
+		return image_buffer;
 
-	*width = int_width;
-	*height = int_height;
+	}
+	else {
+		int int_width, int_height;
+		unsigned char* image_buffer = stbi_load_from_memory(in_buffer, in_buffer_size, &int_width, &int_height, NULL, bytes_per_pixel);
+		if (image_buffer != NULL) {
+			*width = (size_t)int_width;
+			*height = (size_t)int_height;
+		}
+		return image_buffer;
+	}
 
-	return image_buffer;
+	return NULL;
 }
 
 unsigned char* DecodeBitmapFromFile(const char *path, size_t *width, size_t *height, unsigned int bytes_per_pixel)
