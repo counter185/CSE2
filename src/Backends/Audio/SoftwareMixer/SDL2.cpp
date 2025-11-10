@@ -6,6 +6,7 @@
 #include <stddef.h>
 #include <string.h>
 #include <string>
+#include <mutex>
 
 #ifdef __PS2__
 #include <SDL2/SDL.h>
@@ -108,22 +109,25 @@ bool SoftwareMixerBackend_Start(void)
 	return true;
 }
 
+std::mutex mixer_mutex;
+std::mutex organya_mutex;
+
 void SoftwareMixerBackend_LockMixerMutex(void)
 {
-	SDL_LockAudioDevice(device_id);
+	mixer_mutex.lock();
 }
 
 void SoftwareMixerBackend_UnlockMixerMutex(void)
 {
-	SDL_UnlockAudioDevice(device_id);
+	mixer_mutex.unlock();
 }
 
 void SoftwareMixerBackend_LockOrganyaMutex(void)
 {
-	SDL_LockAudioDevice(device_id);
+	organya_mutex.lock();
 }
 
 void SoftwareMixerBackend_UnlockOrganyaMutex(void)
 {
-	SDL_UnlockAudioDevice(device_id);
+	organya_mutex.unlock();
 }
