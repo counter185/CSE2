@@ -38,9 +38,9 @@ void OrganyaThread() {
 
 				int orgPos = 0;
 				while (frames_done < frames_total) {
-					size_t subframes = MIN(0x400, frames_total - frames_done);
+					size_t subframes = MIN(0x800, frames_total - frames_done);
 
-					long mix_buffer[0x400 * 2];
+					long mix_buffer[0x800 * 2];
 					memset(mix_buffer, 0, subframes * sizeof(long) * 2);
 
 					parent_callback(mix_buffer, subframes);
@@ -89,7 +89,7 @@ unsigned long SoftwareMixerBackend_Init(void (*callback)(long *stream, size_t fr
 	specification.freq = 48000;
 	specification.format = AUDIO_S16SYS;
 	specification.channels = 2;
-	specification.samples = 0x200;	// Roughly 10 milliseconds for 48000Hz
+	specification.samples = 0x400;	// Roughly 10 milliseconds for 48000Hz
 	specification.callback = Callback;
 	specification.userdata = NULL;
 
