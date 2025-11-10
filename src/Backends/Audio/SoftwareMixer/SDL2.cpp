@@ -72,10 +72,10 @@ unsigned long SoftwareMixerBackend_Init(void (*callback)(long *stream, size_t fr
 		Backend_PrintInfo("%s", SDL_GetAudioDriver(i));
 
 	SDL_AudioSpec specification;
-	specification.freq = 48000;
+	specification.freq = 11025;
 	specification.format = AUDIO_S16SYS;
 	specification.channels = 2;
-	specification.samples = 0x400;	// Roughly 10 milliseconds for 48000Hz
+	specification.samples = 0x200;	// Roughly 10 milliseconds for 48000Hz
 	specification.callback = Callback;
 	specification.userdata = NULL;
 
