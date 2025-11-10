@@ -137,7 +137,7 @@ void PutOverlay(void)
 
 void PutFramePerSecound(void)
 {
-	PutOverlay();
+	//PutOverlay();
 	if (bFPS)
 	{
 		const unsigned long fps = CountFramePerSecound();
