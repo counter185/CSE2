@@ -24,7 +24,6 @@ void ClearValueView(void)
 
 void SetValueView(int *px, int *py, int value)
 {
-	BOOL minus;
 	int v;
 
 	int index;
@@ -66,11 +65,11 @@ void SetValueView(int *px, int *py, int value)
 	if (value < 0)
 	{
 		value *= -1;
-		minus = TRUE;
+		gVV[index].minus = TRUE;
 	}
 	else
 	{
-		minus = FALSE;
+		gVV[index].minus = FALSE;
 	}
 
 	// Get width
@@ -92,9 +91,9 @@ void SetValueView(int *px, int *py, int value)
 	gVV[index].px = px;
 	gVV[index].py = py;
 	gVV[index].rect.left = 40 - width;
-	gVV[index].rect.top = 8 * index;
+	gVV[index].rect.top = 8;
 	gVV[index].rect.right = 40;
-	gVV[index].rect.bottom = 8 * (index + 1);
+	gVV[index].rect.bottom = 16;
 
 	RECT rect[20] = {
 		{0, 56, 8, 64},
@@ -144,12 +143,12 @@ void SetValueView(int *px, int *py, int value)
 	RECT rcMinus = {40, 48, 48, 56};
 
 	// Draw value
-	CortBox2(&gVV[index].rect, 0x000000, SURFACE_ID_VALUE_VIEW);
+	//CortBox2(&gVV[index].rect, 0x000000, SURFACE_ID_VALUE_VIEW);
 
-	if (minus)
+	/*if (gVV[index].minus)
 		Surface2Surface(gVV[index].rect.left, gVV[index].rect.top, &rcMinus, SURFACE_ID_VALUE_VIEW, SURFACE_ID_TEXT_BOX);
 	else
-		Surface2Surface(gVV[index].rect.left, gVV[index].rect.top, &rcPlus, SURFACE_ID_VALUE_VIEW, SURFACE_ID_TEXT_BOX);
+		Surface2Surface(gVV[index].rect.left, gVV[index].rect.top, &rcPlus, SURFACE_ID_VALUE_VIEW, SURFACE_ID_TEXT_BOX);*/
 
 	for (i = 3; i >= 0; i--)
 	{
@@ -158,10 +157,10 @@ void SetValueView(int *px, int *py, int value)
 
 		sw = TRUE;
 
-		if (minus)
+		if (gVV[index].minus)
 			fig[i] += 10;
 
-		Surface2Surface(((3 - i) * 8) + 8, gVV[index].rect.top, &rect[fig[i]], SURFACE_ID_VALUE_VIEW, SURFACE_ID_TEXT_BOX);
+		//Surface2Surface(((3 - i) * 8) + 8, gVV[index].rect.top, &rect[fig[i]], SURFACE_ID_VALUE_VIEW, SURFACE_ID_TEXT_BOX);
 	}
 }
 
@@ -187,21 +186,104 @@ void ActValueView(void)
 
 void PutValueView(int flx, int fly)
 {
+	RECT rcPlus = { 32, 48, 40, 56 };
+	RECT rcMinus = { 40, 48, 48, 56 };
+
+	RECT rect[20] = {
+		//0-9 digits in TextBox.pbm
+		{0, 56, 8, 64},
+		{8, 56, 16, 64},
+		{16, 56, 24, 64},
+		{24, 56, 32, 64},
+		{32, 56, 40, 64},
+		{40, 56, 48, 64},
+		{48, 56, 56, 64},
+		{56, 56, 64, 64},
+		{64, 56, 72, 64},
+		{72, 56, 80, 64},
+		//red 0-9 digits in TextBox.pbm
+		{0, 64, 8, 72},
+		{8, 64, 16, 72},
+		{16, 64, 24, 72},
+		{24, 64, 32, 72},
+		{32, 64, 40, 72},
+		{40, 64, 48, 72},
+		{48, 64, 56, 72},
+		{56, 64, 64, 72},
+		{64, 64, 72, 72},
+		{72, 64, 80, 72},
+	};
+
 	int offset_x;
 	int v;
 
 	for (v = 0; v < VALUEVIEW_MAX; ++v)
 	{
-		if (gVV[v].flag == FALSE)
+		VALUEVIEW& vw = gVV[v];
+
+		if (vw.flag == FALSE)
 			continue;
 
-		offset_x = (gVV[v].rect.right - gVV[v].rect.left) / 2;
+		offset_x = (vw.rect.right - vw.rect.left) / 2;
 
-		PutBitmap3(
+		int screenX = (*vw.px / 0x200) - offset_x - (flx / 0x200);
+		int screenY = (*vw.py / 0x200) + (vw.offset_y / 0x200) - 4 - (fly / 0x200);
+
+		/*PutBitmap3(
 			&grcGame,
-			(*gVV[v].px / 0x200) - offset_x - (flx / 0x200),
-			(*gVV[v].py / 0x200) + (gVV[v].offset_y / 0x200) - 4 - (fly / 0x200),
-			&gVV[v].rect,
-			SURFACE_ID_VALUE_VIEW);
+			screenX,
+			screenY,
+			&vw.rect,
+			SURFACE_ID_VALUE_VIEW);*/
+
+		int rectH = vw.rect.bottom - vw.rect.top;
+		RECT signRect = vw.minus ? rcMinus : rcPlus;
+		signRect.top = signRect.bottom - rectH;
+
+		PutBitmap3(&grcGame, screenX, screenY + 0, &signRect, SURFACE_ID_TEXT_BOX);
+
+		int dig[4];
+		int fig[4];
+		dig[0] = 1;
+		dig[1] = 10;
+		dig[2] = 100;
+		dig[3] = 1000;
+
+		int wCalcValue = vw.value;
+		if (wCalcValue < 0)
+			wCalcValue *= -1;
+
+		for (int i = 3; i >= 0; --i)
+		{
+			fig[i] = 0;
+
+			while (wCalcValue >= dig[i])
+			{
+				wCalcValue -= dig[i];
+				++fig[i];
+			}
+		}
+
+		BOOL sw = FALSE;
+
+		for (int i = 3; i >= 0; i--)
+		{
+			if (!sw && i != 0 && fig[i] == 0)
+				continue;
+
+			sw = TRUE;
+
+			if (vw.minus)
+				fig[i] += 10;
+
+			int vwPosX = (i * 8) + 8;
+			int vwPosY = 0;
+
+			RECT targetRect = rect[fig[i]];
+			targetRect.top = targetRect.bottom - rectH;
+
+			//Surface2Surface(, gVV[index].rect.top, &rect[fig[i]], SURFACE_ID_VALUE_VIEW, SURFACE_ID_TEXT_BOX);
+			PutBitmap3(&grcGame, screenX + vwPosX, screenY + vwPosY, &targetRect, SURFACE_ID_TEXT_BOX);
+		}
 	}
 }

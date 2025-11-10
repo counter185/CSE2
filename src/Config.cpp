@@ -42,7 +42,11 @@ BOOL LoadConfigData(CONFIGDATA *conf)
 	conf->ok_button_mode = File_ReadLE32(fp);
 
 	// Read display mode (320x240, 640x480, 24-bit fullscreen, 32-bit fullscreen) TODO: add more things?
-	conf->display_mode = 1;//File_ReadLE32(fp);
+#ifdef __PS2__
+	conf->display_mode = 1;
+#else
+	conf->display_mode = 2;
+#endif
 
 	// Read joystick configuration (if enabled, and mappings)
 	conf->bJoystick = TRUE;
@@ -83,7 +87,11 @@ void DefaultConfigData(CONFIGDATA *conf)
 	conf->display_mode = 2;
 #endif
 
+#ifdef __PS2__
 	conf->display_mode = 1;
+#else
+	conf->display_mode = 2;
+#endif
 
 	// Reset joystick settings (as these can't simply be set to 0)
 	conf->bJoystick = TRUE;

@@ -20,6 +20,7 @@ typedef struct VALUEVIEW
   int value;
   int count;
   RECT rect;
+  BOOL minus;
 } VALUEVIEW;
 
 extern VALUEVIEW gVV[VALUEVIEW_MAX];
