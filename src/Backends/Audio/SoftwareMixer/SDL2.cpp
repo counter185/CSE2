@@ -3,9 +3,6 @@
 
 #include "Backend.h"
 
-#include <mutex>
-#include <thread>
-#include <atomic>
 #include <stddef.h>
 #include <string.h>
 #include <string>
@@ -20,55 +17,43 @@
 
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
 
-static void (*parent_callback)(long *stream, size_t frames_total) = NULL;
+static void (*parent_callback)(long *stream, size_t frames_total);
 
 static SDL_AudioDeviceID device_id;
 
-static short* asyncOrganyaStream = NULL;
-static unsigned int organyaStreamSize = 0;
-std::atomic<bool> dataReady = false;
-
-void OrganyaThread() {
-	while (true) {
-		if (parent_callback != NULL) {
-			if (!dataReady) {
-				memset(asyncOrganyaStream, 0, organyaStreamSize);
-				const size_t frames_total = organyaStreamSize / sizeof(short) / 2;
-				size_t frames_done = 0;
-
-				int orgPos = 0;
-				while (frames_done < frames_total) {
-					size_t subframes = MIN(0x800, frames_total - frames_done);
-
-					long mix_buffer[0x800 * 2];
-					memset(mix_buffer, 0, subframes * sizeof(long) * 2);
-
-					parent_callback(mix_buffer, subframes);
-
-					for (size_t i = 0; i < subframes * 2; ++i)
-					{
-						if (mix_buffer[i] > 0x7FFF)
-							asyncOrganyaStream[orgPos++] = 0x7FFF;
-						else if (mix_buffer[i] < -0x7FFF)
-							asyncOrganyaStream[orgPos++] = -0x7FFF;
-						else
-							asyncOrganyaStream[orgPos++] = mix_buffer[i];
-					}
-
-					frames_done += subframes;
-				}
-				dataReady = true;
-			}
-		}
-	}
-}
-
-static void Callback(void* user_data, Uint8* stream_uint8, int len)
+static void Callback(void *user_data, Uint8 *stream_uint8, int len)
 {
-	while (!dataReady) {
+	(void)user_data;
+
+	memset(stream_uint8, 0, len);
+
+	short *stream = (short*)stream_uint8;
+	const size_t frames_total = len / sizeof(short) / 2;
+
+	size_t frames_done = 0;
+
+	while (frames_done != frames_total)
+	{
+		long mix_buffer[0x800 * 2];	// 2 because stereo
+
+		size_t subframes = MIN(0x800, frames_total - frames_done);
+
+		memset(mix_buffer, 0, subframes * sizeof(long) * 2);
+
+		parent_callback(mix_buffer, subframes);
+
+		for (size_t i = 0; i < subframes * 2; ++i)
+		{
+			if (mix_buffer[i] > 0x7FFF)
+				*stream++ = 0x7FFF;
+			else if (mix_buffer[i] < -0x7FFF)
+				*stream++ = -0x7FFF;
+			else
+				*stream++ = mix_buffer[i];
+		}
+
+		frames_done += subframes;
 	}
-	memcpy(stream_uint8, asyncOrganyaStream, len);
-	dataReady = false;
 }
 
 unsigned long SoftwareMixerBackend_Init(void (*callback)(long *stream, size_t frames_total))
@@ -93,9 +78,6 @@ unsigned long SoftwareMixerBackend_Init(void (*callback)(long *stream, size_t fr
 	specification.callback = Callback;
 	specification.userdata = NULL;
 
-	organyaStreamSize = specification.samples * specification.channels * sizeof(short);
-	asyncOrganyaStream = (short*)malloc(organyaStreamSize);
-
 	SDL_AudioSpec obtained_specification;
 	device_id = SDL_OpenAudioDevice(NULL, 0, &specification, &obtained_specification, SDL_AUDIO_ALLOW_FREQUENCY_CHANGE);
 	if (device_id == 0)
@@ -108,9 +90,6 @@ unsigned long SoftwareMixerBackend_Init(void (*callback)(long *stream, size_t fr
 	Backend_PrintInfo("Selected SDL audio driver: %s", SDL_GetCurrentAudioDriver());
 
 	parent_callback = callback;
-
-	std::thread organyaThread(OrganyaThread);
-	organyaThread.detach();
 
 	return obtained_specification.freq;
 }
@@ -129,25 +108,22 @@ bool SoftwareMixerBackend_Start(void)
 	return true;
 }
 
-std::mutex orgMutex;
-std::mutex mixerMutex;
-
 void SoftwareMixerBackend_LockMixerMutex(void)
 {
-	mixerMutex.lock();
+	SDL_LockAudioDevice(device_id);
 }
 
 void SoftwareMixerBackend_UnlockMixerMutex(void)
 {
-	mixerMutex.unlock();
+	SDL_UnlockAudioDevice(device_id);
 }
 
 void SoftwareMixerBackend_LockOrganyaMutex(void)
 {
-	orgMutex.lock();
+	SDL_LockAudioDevice(device_id);
 }
 
 void SoftwareMixerBackend_UnlockOrganyaMutex(void)
 {
-	orgMutex.unlock();
+	SDL_UnlockAudioDevice(device_id);
 }
