@@ -73,7 +73,9 @@ RenderBackend_Surface* RenderBackend_Init(const char *window_title, size_t scree
 #ifdef __PS2__
 	SDL_SetHint(SDL_HINT_PS2_DYNAMIC_VSYNC, "1");
 	SDL_SetHint(SDL_HINT_PS2_GS_WIDTH, "320");
-	SDL_SetHint(SDL_HINT_PS2_GS_HEIGHT, "224");
+	SDL_SetHint(SDL_HINT_PS2_GS_HEIGHT, "240");
+	//SDL_SetHint(SDL_HINT_PS2_GS_PROGRESSIVE, "1"); //do not use progressive scan it makes the screen constantly scroll vertically
+	SDL_SetHint(SDL_HINT_PS2_GS_MODE, "PAL");
 #endif
 
 	SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "nearest");

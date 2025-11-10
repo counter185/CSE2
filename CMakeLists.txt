@@ -506,7 +506,8 @@ if(NOT BACKEND_PLATFORM MATCHES "WiiU" AND NOT BACKEND_PLATFORM MATCHES "3DS")
 endif()
 
 # Name debug builds "CSE2_debug", to distinguish them
-set_target_properties(CSE2 PROPERTIES DEBUG_OUTPUT_NAME "CSE2_debug")
+set_target_properties(CSE2 PROPERTIES DEBUG_OUTPUT_NAME "CSE2_debug.elf")
+set_target_properties(CSE2 PROPERTIES OUTPUT_NAME "CSE2.elf")
 
 # Send executable to the build_en/build_jp directory
 set_target_properties(CSE2 PROPERTIES

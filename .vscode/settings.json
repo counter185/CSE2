@@ -1,0 +1,7 @@
+{
+    "cmake.configureSettings": {
+        "DOCONFIG": "OFF",
+        "JAPANESE": "OFF",
+        "CMAKE_BUILD_TYPE": "Release"
+    }
+}
