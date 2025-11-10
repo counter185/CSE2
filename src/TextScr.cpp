@@ -12,6 +12,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <string>
+#include <vector>
 
 #include "WindowsWrapper.h"
 
@@ -60,6 +61,68 @@ const RECT gRect_line = {0, 0, 216, 16};
 static unsigned long nod_color;
 #endif
 
+
+struct TextLineDrawCall {
+	bool isText;
+	int x, y;
+
+	//text
+	std::string text;
+	unsigned long color;
+	
+	//bitmap
+	RECT targetPos;
+	SurfaceID target;
+};
+
+struct TextLineRT {
+	std::vector<TextLineDrawCall> drawCalls;
+};
+
+std::vector<TextLineRT> textLineRenderTargets = { {},{},{},{} };
+
+void TextLinePutText(int x, int y, const char* text, unsigned long color, SurfaceID srf) {
+	TextLineDrawCall dc;
+	dc.isText = true;
+	dc.x = x;
+	dc.y = y;
+	dc.text = text;
+	dc.color = color;
+
+	textLineRenderTargets[(int)(srf - SURFACE_ID_TEXT_LINE1)].drawCalls.push_back(dc);
+}
+void TextLinePutBitmap(int x, int y, const RECT* rect, SurfaceID dst, SurfaceID src) {
+	TextLineDrawCall dc;
+	dc.isText = false;
+	dc.x = x;
+	dc.y = y;
+	dc.targetPos = *rect;
+	dc.target = src;
+
+	textLineRenderTargets[(int)(dst - SURFACE_ID_TEXT_LINE1)].drawCalls.push_back(dc);
+}
+void TextLineClear(SurfaceID srf) {
+	textLineRenderTargets[(int)(srf - SURFACE_ID_TEXT_LINE1)].drawCalls.clear();
+}
+
+void RunDrawCalls(RECT* target, int atX, int atY, SurfaceID srf) {
+	TextLineRT& t = textLineRenderTargets[(int)(srf - SURFACE_ID_TEXT_LINE1)];
+	for (TextLineDrawCall& dc : t.drawCalls) {
+		int px = atX + dc.x;
+		int py = target->top + atY + dc.y;
+
+		if ((py+3) <= target->bottom && (py+10) >= target->top) {
+
+			if (dc.isText) {
+				PutText(px, py, dc.text.c_str(), dc.color);
+			}
+			else {
+				PutBitmap3(target, px, py, &dc.targetPos, dc.target);
+			}
+		}
+	}
+}
+
 // Initialize and end tsc
 BOOL InitTextScript2(void)
 {
@@ -74,8 +137,8 @@ BOOL InitTextScript2(void)
 	g_GameFlags &= ~4;
 
 	// Create line surfaces
-	for (i = 0; i < 4; ++i)
-		MakeSurface_Generic(gRect_line.right, gRect_line.bottom, (SurfaceID)(SURFACE_ID_TEXT_LINE1 + i), FALSE, TRUE);
+	//for (i = 0; i < 4; ++i)
+		//MakeSurface_Generic(gRect_line.right, gRect_line.bottom, (SurfaceID)(SURFACE_ID_TEXT_LINE1 + i), FALSE, TRUE);
 
 	// Clear text
 	memset(text, 0, sizeof(text));
@@ -99,8 +162,8 @@ void EndTextScript(void)
 	// Release buffers
 	ReleaseSurface(SURFACE_ID_TEXT_BOX);
 
-	for (i = 0; i < 4; ++i)
-		ReleaseSurface((SurfaceID)(SURFACE_ID_TEXT_LINE1 + i));
+	/*for (i = 0; i < 4; ++i)
+		ReleaseSurface((SurfaceID)(SURFACE_ID_TEXT_LINE1 + i));*/
 }
 
 // Decrypt .tsc
@@ -319,8 +382,9 @@ BOOL JumpTextScript(int no)
 	// Clear text lines
 	for (i = 0; i < 4; ++i)
 	{
-		gTS.ypos_line[i] = i * 16;
-		CortBox2(&gRect_line, 0x000000, (SurfaceID)(SURFACE_ID_TEXT_LINE1 + i));
+		gTS.ypos_line[i] = i * 16; 
+		TextLineClear((SurfaceID)(SURFACE_ID_TEXT_LINE1 + i));
+		//CortBox2(&gRect_line, 0x000000, (SurfaceID)(SURFACE_ID_TEXT_LINE1 + i));
 		memset(text[i], 0, sizeof(text[0]));
 	}
 
@@ -374,7 +438,8 @@ void CheckNewLine(void)
 	{
 		gTS.mode = 3;
 		g_GameFlags |= 4;
-		CortBox2(&gRect_line, 0, (SurfaceID)(SURFACE_ID_TEXT_LINE1 + (gTS.line % 4)));
+		TextLineClear((SurfaceID)(SURFACE_ID_TEXT_LINE1 + (gTS.line % 4)));
+		//CortBox2(&gRect_line, 0, (SurfaceID)(SURFACE_ID_TEXT_LINE1 + (gTS.line % 4)));
 		memset(text[gTS.line % 4], 0, sizeof(text[0]));
 	}
 }
@@ -421,7 +486,8 @@ void SetNumberTextScript(int index)
 	str[offset + 1] = '\0';
 
 	// Append number to line
-	PutText2(gTS.p_write * 6, 0, str, RGB(0xFF, 0xFF, 0xFE), (SurfaceID)(SURFACE_ID_TEXT_LINE1 + (gTS.line % 4)));
+	//PutText2(gTS.p_write * 6, 0, str, RGB(0xFF, 0xFF, 0xFE), (SurfaceID)(SURFACE_ID_TEXT_LINE1 + (gTS.line % 4)));
+	TextLinePutText(gTS.p_write * 6, 0, str, RGB(0xFF, 0xFF, 0xFE), (SurfaceID)(SURFACE_ID_TEXT_LINE1 + (gTS.line % 4)));
 	strcat(text[gTS.line % 4], str);
 
 	// Play sound and reset blinking cursor
@@ -451,7 +517,8 @@ void ClearTextLine(void)
 	for (i = 0; i < 4; ++i)
 	{
 		gTS.ypos_line[i] = i * 16;
-		CortBox2(&gRect_line, 0x000000, (SurfaceID)(SURFACE_ID_TEXT_LINE1 + i));
+		//CortBox2(&gRect_line, 0x000000, (SurfaceID)(SURFACE_ID_TEXT_LINE1 + i));
+		TextLineClear((SurfaceID)(SURFACE_ID_TEXT_LINE1 + i));
 		memset(text[i], 0, sizeof(text[0]));
 	}
 }
@@ -520,7 +587,8 @@ void PutTextScript(void)
 		text_offset = 0;
 
 	for (i = 0; i < 4; ++i)
-		PutBitmap3(&gTS.rcText, TEXT_LEFT + text_offset, gTS.offsetY + gTS.ypos_line[i] + gTS.rcText.top, &gRect_line, (SurfaceID)(SURFACE_ID_TEXT_LINE1 + i));
+		RunDrawCalls(&gTS.rcText, TEXT_LEFT + text_offset, gTS.offsetY + gTS.ypos_line[i], (SurfaceID)(SURFACE_ID_TEXT_LINE1 + i));
+		//PutBitmap3(&gTS.rcText, TEXT_LEFT + text_offset, gTS.offsetY + gTS.ypos_line[i] + gTS.rcText.top, &gRect_line, (SurfaceID)(SURFACE_ID_TEXT_LINE1 + i));
 
 	// Draw NOD cursor
 	if ((gTS.wait_beam++ % 20 > 12) && gTS.mode == 2)
@@ -1383,7 +1451,8 @@ int TextScriptProc(void)
 					//#endif
 
 						// Print text
-						PutText2(0, 0, str, RGB(0xFF, 0xFF, 0xFE), (SurfaceID)(SURFACE_ID_TEXT_LINE1 + (gTS.line % 4)));
+						//PutText2(0, 0, str, RGB(0xFF, 0xFF, 0xFE), (SurfaceID)(SURFACE_ID_TEXT_LINE1 + (gTS.line % 4)));
+						TextLinePutText(0, 0, str, RGB(0xFF, 0xFF, 0xFE), (SurfaceID)(SURFACE_ID_TEXT_LINE1 + (gTS.line % 4)));
 					#ifdef FIX_BUGS
 						strcpy(text[gTS.line % 4], str);
 					#else
@@ -1416,11 +1485,13 @@ int TextScriptProc(void)
 						// Print text
 						if (c[0] == '=')
 						{
-							Surface2Surface(gTS.p_write * 6, 2, &rcSymbol, (SurfaceID)(SURFACE_ID_TEXT_LINE1 + (gTS.line % 4)), SURFACE_ID_TEXT_BOX);
+							TextLinePutBitmap(gTS.p_write * 6, 2, &rcSymbol, (SurfaceID)(SURFACE_ID_TEXT_LINE1 + (gTS.line % 4)), SURFACE_ID_TEXT_BOX);
+							//Surface2Surface(gTS.p_write * 6, 2, &rcSymbol, (SurfaceID)(SURFACE_ID_TEXT_LINE1 + (gTS.line % 4)), SURFACE_ID_TEXT_BOX);
 						}
 						else
 						{
-							PutText2(gTS.p_write * 6, 0, c, RGB(0xFF, 0xFF, 0xFE), (SurfaceID)(SURFACE_ID_TEXT_LINE1 + (gTS.line % 4)));
+							//PutText2(gTS.p_write * 6, 0, c, RGB(0xFF, 0xFF, 0xFE), (SurfaceID)(SURFACE_ID_TEXT_LINE1 + (gTS.line % 4)));
+							TextLinePutText(gTS.p_write * 6, 0, c, RGB(0xFF, 0xFF, 0xFE), (SurfaceID)(SURFACE_ID_TEXT_LINE1 + (gTS.line % 4)));
 						}
 
 						strcat(text[gTS.line % 4], c);
@@ -1553,7 +1624,9 @@ void RestoreTextScript(void)
 
 	for (i = 0; i < 4; ++i)
 	{
-		CortBox2(&gRect_line, 0x000000, (SurfaceID)(SURFACE_ID_TEXT_LINE1 + i));
-		PutText2(0, 0, text[i], RGB(0xFF, 0xFF, 0xFE), (SurfaceID)(SURFACE_ID_TEXT_LINE1 + i));
+		//CortBox2(&gRect_line, 0x000000, (SurfaceID)(SURFACE_ID_TEXT_LINE1 + i));
+		TextLineClear((SurfaceID)(SURFACE_ID_TEXT_LINE1 + i));
+		//PutText2(0, 0, text[i], RGB(0xFF, 0xFF, 0xFE), (SurfaceID)(SURFACE_ID_TEXT_LINE1 + i));
+		TextLinePutText(0, 0, text[i], RGB(0xFF, 0xFF, 0xFE), (SurfaceID)(SURFACE_ID_TEXT_LINE1 + i));
 	}
 }
