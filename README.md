@@ -1,4 +1,26 @@
-[![Build Status](https://travis-ci.com/Clownacy/CSE2.svg?branch=portable)](https://travis-ci.com/Clownacy/CSE2)
+
+# CSE2-ps2
+
+This is a port of Cave Story (CSE2) to the PlayStation 2. As of right now it's playable with minor issues (mainly texture-related). A full install of ps2sdk with gsKit is required to build this.
+
+## Technical details
+
+Unlike doukutsu-psx, this port uses SDL2. The original code makes heavy use of render targets, which [the SDL PS2 port does not support](https://github.com/libsdl-org/SDL/blob/24fe3c48a0869684333ff813395cd18ccfd31322/src/render/ps2/SDL_render_ps2.c#L210) nor would it even have the VRAM space for, so things like textbox code had to be rewritten. SDL2 also has incorrect texture colors, which was fixed in SDL3, but needs a custom build that has this fix backported.
+
+Some sprites are rendered incorrectly with texture coordinates off by one pixel. I have no idea how to fix this so I'll just resize all spritesheets to have dimensions divisible by 16, which seems to fix it sometimes.
+
+Resolution was reduced to 240p, as 640x480 runs way below target framerate, causing slow game speed (game speed is tied to framerate here). This should be fine as 320x240 is a supported target resolution in the original game.
+
+Audio frequency was reduced to 22.05khz, which seems to be the only supported option that doesn't have a crackling issue.
+
+@Oceanharte also redid some of the graphics to fit the spirit of this port. I'll have versions with changed and original graphics up when it gets finished.
+
+![](ps2.png)
+
+---
+---
+
+# Original description below
 
 ## Table of Contents
 
