@@ -411,8 +411,9 @@ void RenderBackend_UploadGlyph(RenderBackend_GlyphAtlas *atlas, size_t x, size_t
 		SDL_Texture* glyph_texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGBA32, SDL_TEXTUREACCESS_STATIC, 
 			width > 16 ? width : 16,
 			height > 16 ? height : 16);
+		SDL_Rect targetArea = {0,0, width, height};
 		SDL_SetTextureBlendMode(glyph_texture, SDL_BLENDMODE_BLEND);
-		SDL_UpdateTexture(glyph_texture, NULL, buffer, width * 4);
+		SDL_UpdateTexture(glyph_texture, &targetArea, buffer, width * 4);
 		atlas->glyph_textures[encxy] = glyph_texture;
 
 		free(buffer);
@@ -443,17 +444,21 @@ void RenderBackend_PrepareToDrawGlyphs(RenderBackend_GlyphAtlas *atlas, RenderBa
 void RenderBackend_DrawGlyph(long x, long y, size_t glyph_x, size_t glyph_y, size_t glyph_width, size_t glyph_height)
 {
 	uint64_t key = encodeXY(glyph_x, glyph_y);
+
+	int w = glyph_width;// > 16 ? glyph_width : 16;
+	int h = glyph_height;// > 16 ? glyph_height : 16;
+
 	SDL_Rect source_rect;
 	source_rect.x = 0;
 	source_rect.y = 0;
-	source_rect.w = glyph_width;
-	source_rect.h = glyph_height;
+	source_rect.w = w;
+	source_rect.h = h;
 
 	SDL_Rect destination_rect;
 	destination_rect.x = x;
 	destination_rect.y = y;
-	destination_rect.w = glyph_width;
-	destination_rect.h = glyph_height;
+	destination_rect.w = w;
+	destination_rect.h = h;
 
 	SDL_Texture* target = glyph_atlas->glyph_textures[key];
 	SDL_SetTextureColorMod(target, glyph_atlas->colorR, glyph_atlas->colorG, glyph_atlas->colorB);
