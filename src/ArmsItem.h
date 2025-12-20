@@ -92,7 +92,7 @@ BOOL SubItemData(long code);
 
 
 /// Inventory loop. Returns mode.
-int CampLoop(void);
+int CampLoop(void (*bgRenderCode)() = 0);
 
 
 /// Search for a in the items. Returns whether a was found

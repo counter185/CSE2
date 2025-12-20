@@ -478,6 +478,31 @@ static int ModeTitle(void)
 	return 3;
 }
 
+static void RenderGame() {
+	int frame_x;
+	int frame_y;
+	unsigned long color = GetCortBoxColor(RGB(0, 0, 0x20));
+
+	ProcFade();
+	CortBox(&grcFull, color);
+	GetFramePosition(&frame_x, &frame_y);
+	PutBack(frame_x, frame_y);
+	PutStage_Back(frame_x, frame_y);
+	PutBossChar(frame_x, frame_y);
+	PutNpChar(frame_x, frame_y);
+	PutBullet(frame_x, frame_y);
+	PutMyChar(frame_x, frame_y);
+	PutStar(frame_x, frame_y);
+	PutMapDataVector(frame_x, frame_y);
+	PutStage_Front(frame_x, frame_y);
+	PutFront(frame_x, frame_y);
+	PutFlash();
+	PutCaret(frame_x, frame_y);
+	PutValueView(frame_x, frame_y);
+	PutBossLife();
+	PutFade();
+}
+
 static int ModeAction(void)
 {
 	int frame_x;
@@ -588,33 +613,16 @@ static int ModeAction(void)
 			ActionStripper();
 		}
 
-		ProcFade();
-		CortBox(&grcFull, color);
-		GetFramePosition(&frame_x, &frame_y);
-		PutBack(frame_x, frame_y);
-		PutStage_Back(frame_x, frame_y);
-		PutBossChar(frame_x, frame_y);
-		PutNpChar(frame_x, frame_y);
-		PutBullet(frame_x, frame_y);
-		PutMyChar(frame_x, frame_y);
-		PutStar(frame_x, frame_y);
-		PutMapDataVector(frame_x, frame_y);
-		PutStage_Front(frame_x, frame_y);
-		PutFront(frame_x, frame_y);
-		PutFlash();
-		PutCaret(frame_x, frame_y);
-		PutValueView(frame_x, frame_y);
-		PutBossLife();
-		PutFade();
+		RenderGame();
 
 		if (!(g_GameFlags & 4))
 		{
 			// Open inventory
 			if (gKeyTrg & gKeyItem)
 			{
-				BackupSurface(SURFACE_ID_SCREEN_GRAB, &grcGame);
+				//BackupSurface(SURFACE_ID_SCREEN_GRAB, &grcGame);
 
-				switch (CampLoop())
+				switch (CampLoop(&RenderGame))
 				{
 					case enum_ESCRETURN_exit:
 						return 0;

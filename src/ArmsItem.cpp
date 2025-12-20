@@ -420,7 +420,7 @@ void PutCampObject(void)
 	}
 }
 
-int CampLoop(void)
+int CampLoop(void (*bgRenderCode)())
 {
 	std::string old_script_path;
 
@@ -478,7 +478,12 @@ int CampLoop(void)
 		}
 
 		// Get currently displayed image
-		PutBitmap4(&rcView, 0, 0, &rcView, SURFACE_ID_SCREEN_GRAB);
+		if (bgRenderCode) {
+			bgRenderCode();
+		}
+		else {
+			PutBitmap4(&rcView, 0, 0, &rcView, SURFACE_ID_SCREEN_GRAB);
+		}
 		PutCampObject();
 		PutTextScript();
 		PutFramePerSecound();
