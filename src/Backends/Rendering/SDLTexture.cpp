@@ -7,6 +7,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <string>
+#include <map>
 
 #ifdef __PS2__
 #include <SDL2/SDL.h>
@@ -36,8 +37,12 @@ typedef struct RenderBackend_Surface
 
 typedef struct RenderBackend_GlyphAtlas
 {
-	SDL_Texture *texture;
+	std::map<uint64_t, SDL_Texture*> glyph_textures;
+	uint8_t colorR = 255, colorG = 255, colorB = 255;
 } RenderBackend_GlyphAtlas;
+static uint64_t encodeXY(int x, int y) {
+	return ((uint64_t)x << 32) | (uint64_t)y;
+}
 
 SDL_Window *window;
 
@@ -349,11 +354,12 @@ void RenderBackend_ColourFill(RenderBackend_Surface *surface, const RenderBacken
 
 RenderBackend_GlyphAtlas* RenderBackend_CreateGlyphAtlas(size_t width, size_t height)
 {
-	RenderBackend_GlyphAtlas *atlas = (RenderBackend_GlyphAtlas*)malloc(sizeof(RenderBackend_GlyphAtlas));
+	RenderBackend_GlyphAtlas* atlas = new RenderBackend_GlyphAtlas;//(RenderBackend_GlyphAtlas*)malloc(sizeof(RenderBackend_GlyphAtlas));
 
 	if (atlas != NULL)
 	{
-		atlas->texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGBA32, SDL_TEXTUREACCESS_STATIC, width, height);
+		atlas->glyph_textures = {};
+		/*atlas->texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGBA32, SDL_TEXTUREACCESS_STATIC, width, height);
 		texMem += width * height * 4;
 
 		if (atlas->texture != NULL)
@@ -365,7 +371,8 @@ RenderBackend_GlyphAtlas* RenderBackend_CreateGlyphAtlas(size_t width, size_t he
 			Backend_PrintError("Couldn't create texture for renderer: %s", SDL_GetError());
 		}
 
-		free(atlas);
+		free(atlas);*/
+		return atlas;
 	}
 
 	return NULL;
@@ -373,13 +380,15 @@ RenderBackend_GlyphAtlas* RenderBackend_CreateGlyphAtlas(size_t width, size_t he
 
 void RenderBackend_DestroyGlyphAtlas(RenderBackend_GlyphAtlas *atlas)
 {
-	SDL_DestroyTexture(atlas->texture);
-	free(atlas);
+	for (auto& tex : atlas->glyph_textures) {
+		SDL_DestroyTexture(tex.second);
+	}
+	delete atlas;
 }
 
 void RenderBackend_UploadGlyph(RenderBackend_GlyphAtlas *atlas, size_t x, size_t y, const unsigned char *pixels, size_t width, size_t height, size_t pitch)
 {
-	unsigned char *buffer = (unsigned char*)malloc(width * height * 4);
+	unsigned char* buffer = (unsigned char*)malloc(width * height * 4);
 
 	if (buffer != NULL)
 	{
@@ -398,14 +407,13 @@ void RenderBackend_UploadGlyph(RenderBackend_GlyphAtlas *atlas, size_t x, size_t
 			}
 		}
 
-		SDL_Rect rect;
-		rect.x = x;
-		rect.y = y;
-		rect.w = width;
-		rect.h = height;
-
-		if (SDL_UpdateTexture(atlas->texture, &rect, buffer, width * 4) < 0)
-			Backend_PrintError("Couldn't update texture: %s", SDL_GetError());
+		uint64_t encxy = encodeXY(x, y);
+		SDL_Texture* glyph_texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGBA32, SDL_TEXTUREACCESS_STATIC, 
+			width > 16 ? width : 16,
+			height > 16 ? height : 16);
+		SDL_SetTextureBlendMode(glyph_texture, SDL_BLENDMODE_BLEND);
+		SDL_UpdateTexture(glyph_texture, NULL, buffer, width * 4);
+		atlas->glyph_textures[encxy] = glyph_texture;
 
 		free(buffer);
 	}
@@ -418,21 +426,26 @@ void RenderBackend_PrepareToDrawGlyphs(RenderBackend_GlyphAtlas *atlas, RenderBa
 	if (SDL_SetRenderTarget(renderer, destination_surface->texture) < 0)
 		Backend_PrintError("Couldn't set texture as current rendering target: %s", SDL_GetError());
 
+	atlas->colorR = red;
+	atlas->colorG = green;
+	atlas->colorB = blue;
+
 	// The SDL_Texture side of things uses alpha, not a colour-key, so the bug where the font is blended
 	// with the colour key doesn't occur.
-	if (SDL_SetTextureColorMod(atlas->texture, red, green, blue) < 0)
+	/*if (SDL_SetTextureColorMod(atlas->texture, red, green, blue) < 0)
 		Backend_PrintError("Couldn't set additional color value: %s", SDL_GetError());
 
 	if (SDL_SetTextureBlendMode(atlas->texture, SDL_BLENDMODE_BLEND) < 0)
-		Backend_PrintError("Couldn't set texture blend mode: %s", SDL_GetError());
+		Backend_PrintError("Couldn't set texture blend mode: %s", SDL_GetError());*/
 
 }
 
 void RenderBackend_DrawGlyph(long x, long y, size_t glyph_x, size_t glyph_y, size_t glyph_width, size_t glyph_height)
 {
+	uint64_t key = encodeXY(glyph_x, glyph_y);
 	SDL_Rect source_rect;
-	source_rect.x = glyph_x;
-	source_rect.y = glyph_y;
+	source_rect.x = 0;
+	source_rect.y = 0;
 	source_rect.w = glyph_width;
 	source_rect.h = glyph_height;
 
@@ -442,7 +455,9 @@ void RenderBackend_DrawGlyph(long x, long y, size_t glyph_x, size_t glyph_y, siz
 	destination_rect.w = glyph_width;
 	destination_rect.h = glyph_height;
 
-	if (SDL_RenderCopy(renderer, glyph_atlas->texture, &source_rect, &destination_rect) < 0)
+	SDL_Texture* target = glyph_atlas->glyph_textures[key];
+	SDL_SetTextureColorMod(target, glyph_atlas->colorR, glyph_atlas->colorG, glyph_atlas->colorB);
+	if (SDL_RenderCopy(renderer, target, &source_rect, &destination_rect) < 0)
 		Backend_PrintError("Couldn't copy glyph texture portion to renderer: %s", SDL_GetError());
 }
 

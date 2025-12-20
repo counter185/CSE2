@@ -106,3 +106,5 @@
 game_english/CSE2.elf
 game_japanese/CSE2.elf
 game_english/CSE2_debug.elf
+game_english/CSE2_debug.elf.exe
+game_english/CSE2_debug.elf.pdb
